@@ -1,0 +1,86 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using Zenject;
+
+public class InputService  : IInputService, IInitializable, IDisposable
+{
+  private NewActions  _input = new();
+  
+      private Vector2 _direction;
+      private bool _isUsing;
+  
+      public event Action JumpPressed;
+      public event Action UseStarted;
+      public event Action UseStopped;
+      public event Action<Vector2> LookPerformed;
+  
+      public Vector2 Direction => _direction;
+      public bool IsUsing => _isUsing;
+  
+      private void SubscribeToEvents()
+      {
+          _input.Enable();
+  
+          _input.Player.Munment.started += OnMove;
+          _input.Player.Munment.performed += OnMove;
+          _input.Player.Munment.canceled += OnMove;
+          _input.Player.Jump.started += OnJump;
+          _input.Player.Use.started += OnUse;
+          _input.Player.Use.canceled += OnUse;
+          _input.Player.Look.performed += OnLook;
+      }
+  
+      private void OnLook(InputAction.CallbackContext obj)
+      {
+          LookPerformed?.Invoke(obj.ReadValue<Vector2>());
+      }
+  
+      private void OnUse(InputAction.CallbackContext context)
+      {
+          _isUsing = context.ReadValueAsButton();
+  
+          if (_isUsing)
+              UseStarted?.Invoke();
+          else
+              UseStopped?.Invoke();
+      }
+  
+      private void OnJump(InputAction.CallbackContext context)
+      {
+          JumpPressed?.Invoke();
+      }
+  
+      private void OnMove(InputAction.CallbackContext context)
+      {
+          _direction = context.ReadValue<Vector2>();
+      }
+  
+      private void UnsubscribeFromEvents()
+      {
+          _input.Player.Munment.started -= OnMove;
+          _input.Player.Munment.performed -= OnMove;
+          _input.Player.Munment.canceled -= OnMove;
+          _input.Player.Jump.started -= OnJump;
+          _input.Player.Use.started -= OnUse;
+          _input.Player.Use.canceled -= OnUse;
+          _input.Player.Look.performed -= OnLook;
+  
+          _input.Disable();
+      }
+  
+      public void Dispose()
+      {
+          UnsubscribeFromEvents();
+      }
+  
+      public void Initialize()
+      {
+          Cursor.lockState = CursorLockMode.Locked;
+          Cursor.visible = false;
+          SubscribeToEvents();
+          
+      }
+}
